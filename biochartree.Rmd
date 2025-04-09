@@ -1,0 +1,122 @@
+---
+title: "Biochar Tree"
+output: html_notebook
+---
+
+
+```{r respiration}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+
+resp <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="respiration", range="A1:E193")
+head(resp)
+
+resp <- resp %>%
+  mutate(respiration = ifelse(replication == 2 & day == 2, NA, respiration))
+
+#------------ 
+
+resp$biochar_ratio <- as.factor(resp$biochar_ratio)
+resp$day <- as.factor(resp$day)
+resp$fertilizer <- as.factor(resp$fertilizer)
+
+#------------ 
+
+full_anova <- aov(respiration ~ fertilizer * biochar_ratio * day, data = resp)
+summary(full_anova)
+
+#------------ 
+
+# fertilizer
+tukey_fertilizer <- TukeyHSD(aov(respiration ~ fertilizer, data = resp))
+print(tukey_fertilizer)
+
+#biochar
+tukey_biochar <- TukeyHSD(aov(respiration ~ biochar_ratio, data = resp))
+print(tukey_biochar)
+
+#------------ 
+
+# Prepare data for both Biochar and Fertilizer plots
+biochar_summary <- resp %>%
+  group_by(biochar_ratio) %>%
+  summarize(mean_resp = mean(respiration, na.rm = TRUE),
+            sd_resp = sd(respiration, na.rm = TRUE),
+            n = n(),
+            se_resp = sd_resp / sqrt(n))
+
+fert_summary <- resp %>%
+  group_by(fertilizer) %>%
+  summarize(mean_resp = mean(respiration, na.rm = TRUE),
+            sd_resp = sd(respiration, na.rm = TRUE),
+            n = n(),
+            se_resp = sd_resp / sqrt(n))
+
+# Make fertilizer levels ordered correctly
+fert_summary$fertilizer <- factor(fert_summary$fertilizer, levels = c("fert-0", "fert-.5", "fert-1", "fert-2"))
+
+# Combine the two summaries for easier plotting
+biochar_summary$plot_type <- "Biochar"
+fert_summary$plot_type <- "Fertilizer"
+
+# Bind the data frames together
+combined_summary <- bind_rows(biochar_summary, fert_summary)
+
+# Plotting with facets
+ggplot(combined_summary, aes(x = factor(ifelse(plot_type == "Biochar", biochar_ratio, fertilizer)), 
+                             y = mean_resp, fill = plot_type)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_errorbar(aes(ymin = mean_resp - se_resp, ymax = mean_resp + se_resp), width = 0.2, position = position_dodge(0.9)) +
+  facet_wrap(~ plot_type, scales = "free_x") +
+  labs(x = "Treatment", y = "Mean Respiration") +
+  theme_minimal() +
+  scale_fill_manual(values = c("Biochar" = "#4DAF4A", "Fertilizer" = "#377EB8")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+#------------
+
+# Prepare data for both Biochar and Fertilizer combined
+combined_summary <- resp %>%
+  group_by(biochar_ratio, fertilizer) %>%
+  summarize(mean_resp = mean(respiration, na.rm = TRUE),
+            sd_resp = sd(respiration, na.rm = TRUE),
+            n = n(),
+            se_resp = sd_resp / sqrt(n))
+
+# Create a new column that combines the levels of biochar and fertilizer
+combined_summary$biochar_fert_combined <- paste(combined_summary$biochar_ratio, 
+                                                combined_summary$fertilizer, sep = " @ ")
+
+# Ensure the x-axis is ordered first by biochar_ratio, then by fertilizer
+combined_summary$biochar_fert_combined <- factor(combined_summary$biochar_fert_combined,
+                                                 levels = c("0 @ fert-0", "0 @ fert-.5", "0 @ fert-1", "0 @ fert-2",
+                                                            "25 @ fert-0", "25 @ fert-.5", "25 @ fert-1", "25 @ fert-2",
+                                                            "50 @ fert-0", "50 @ fert-.5", "50 @ fert-1", "50 @ fert-2",
+                                                            "100 @ fert-0", "100 @ fert-.5", "100 @ fert-1", "100 @ fert-2"))
+
+# Plot
+ggplot(combined_summary, aes(x = biochar_fert_combined, y = mean_resp, fill = biochar_fert_combined)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_errorbar(aes(ymin = mean_resp - se_resp, ymax = mean_resp + se_resp), 
+                width = 0.2, position = position_dodge(0.9)) +
+  labs(x = "Biochar and Fertilizer Combinations", y = "Mean Respiration") +
+  theme_minimal() +
+  scale_fill_manual(values = c("0 @ fert-0" = "#4DAF4A", "0 @ fert-.5" = "#4DAF4A", 
+                               "0 @ fert-1" = "#4DAF4A", "0 @ fert-2" = "#4DAF4A",
+                               "25 @ fert-0" = "#9B59B6", "25 @ fert-.5" = "#9B59B6", 
+                               "25 @ fert-1" = "#9B59B6", "25 @ fert-2" = "#9B59B6",
+                               "50 @ fert-0" = "#F39C12", "50 @ fert-.5" = "#F39C12", 
+                               "50 @ fert-1" = "#F39C12", "50 @ fert-2" = "#F39C12",
+                               "100 @ fert-0" = "#2C3E50", "100 @ fert-.5" = "#2C3E50", 
+                               "100 @ fert-1" = "#2C3E50", "100 @ fert-2" = "#2C3E50")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+
+```{r}
+
+```
+
