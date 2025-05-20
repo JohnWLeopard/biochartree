@@ -8,6 +8,11 @@ output: html_notebook
 library(readxl)
 library(dplyr)
 library(ggplot2)
+library(lme4)     
+library(emmeans) 
+library(ggpubr) 
+library(Matrix)
+
 
 resp <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="respiration", range="A1:E193")
 head(resp)
@@ -20,21 +25,6 @@ resp <- resp %>%
 resp$biochar_ratio <- as.factor(resp$biochar_ratio)
 resp$day <- as.factor(resp$day)
 resp$fertilizer <- as.factor(resp$fertilizer)
-
-#------------ 
-
-full_anova <- aov(respiration ~ fertilizer * biochar_ratio * day, data = resp)
-summary(full_anova)
-
-#------------ 
-
-# fertilizer
-tukey_fertilizer <- TukeyHSD(aov(respiration ~ fertilizer, data = resp))
-print(tukey_fertilizer)
-
-#biochar
-tukey_biochar <- TukeyHSD(aov(respiration ~ biochar_ratio, data = resp))
-print(tukey_biochar)
 
 #------------ 
 
@@ -112,11 +102,181 @@ ggplot(combined_summary, aes(x = biochar_fert_combined, y = mean_resp, fill = bi
                                "100 @ fert-1" = "#2C3E50", "100 @ fert-2" = "#2C3E50")) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
+# ----------
+
+resp %>%
+  group_by(fertilizer, biochar_ratio, day) %>%
+  summarise(mean_resp = mean(respiration, na.rm = TRUE),
+            sd_resp = sd(respiration, na.rm = TRUE),
+            n = sum(!is.na(respiration))) %>%
+  arrange(fertilizer, biochar_ratio, day)
+
+ggplot(resp, aes(x = day, y = respiration, color = factor(biochar_ratio))) +
+  geom_point(position = position_jitter(width = 0.1), alpha = 0.7) +
+  geom_smooth(method = "loess", se = FALSE) +
+  facet_wrap(~fertilizer) +
+  theme_minimal() +
+  labs(title = "Respiration over Time",
+       x = "Day",
+       y = "Respiration Rate",
+       color = "Biochar Ratio (%)")
+
+#--------
+ 
+resp_clean <- resp %>% filter(!is.na(respiration))
+
+# Convert factors
+resp_clean <- resp_clean %>%
+  mutate(
+    fertilizer = factor(fertilizer),
+    biochar_ratio = factor(biochar_ratio),
+    day = factor(day),
+    replication = factor(replication)
+  )
+
+model_aov <- aov(respiration ~ fertilizer * biochar_ratio * day, data = resp_clean)
+#TukeyHSD(model_aov, which = "fertilizer")
+
+full_anova <- aov(respiration ~ fertilizer * biochar_ratio * day, data = resp)
+summary(full_anova)
+
+#TukeyHSD(full_anova, which ="fertilizer")
+#TukeyHSD(full_anova, which ="biochar_ratio")
+#TukeyHSD(full_anova, which ="fertilizer:biochar_ratio")
 ```
 
 
 
-```{r}
+```{r RSR}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(lme4)     
+library(emmeans) 
+library(ggpubr) 
+library(Matrix)
 
+rsr <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="rsr", range="A1:D49")
+head(rsr)
+
+# ------
+
+library(dplyr)
+library(ggplot2)
+
+# Filter for one species, e.g., 'sl'
+rsr_sl <- rsr %>%
+  filter(species == "sl") %>%
+  mutate(fertilizer = factor(fertilizer, levels = c("none", "half", "full", "double")))
+
+rsr_summary <- rsr_sl %>%
+  group_by(biochar_ratio, fertilizer) %>%
+  summarise(
+    se_RSR = sd(mean_RSR, na.rm = TRUE) / sqrt(n()),
+    n = n(),
+    .groups = "drop"
+  )
+
+rsr$fertilizer <- factor(rsr$fertilizer, levels = c("none", "half", "full", "double"))
+
+# Plot bar graph with error bars
+ggplot(rsr, aes(x = factor(biochar_ratio), y = mean_RSR, fill = fertilizer)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  facet_wrap(~ species) +
+  theme_minimal() +
+  labs(x = "Biochar Ratio (%)", 
+       y = "Mean Root-to-Shoot Ratio per Tree", 
+       title = "Mean RSR by Biochar Level and Fertilizer Across Species") +
+  scale_fill_manual(values = c("none" = "#a6cee3", 
+                               "half" = "#1f78b4", 
+                               "full" = "#b2df8a", 
+                               "double" = "#33a02c"))
+
+
+# -------
+
+
+# Make sure fertilizer and biochar_ratio are factors
+rsr$fertilizer <- factor(rsr$fertilizer, levels = c("none", "half", "full", "double"))
+rsr$biochar_ratio <- factor(rsr$biochar_ratio, levels = c("0", "25", "50", "100"))
+rsr$species <- factor(rsr$species)
+
+# Run a two-way ANOVA with species as an additional factor:
+#anova_rsr <- aov(mean_RSR ~ fertilizer * biochar_ratio * species, data = rsr)
+#summary(anova_rsr)
+
+#TukeyHSD(anova_rsr, which = "species")
+#TukeyHSD(anova_rsr, which = "fertilizer")
+#TukeyHSD(anova_rsr, which = "biochar_ratio")
+#TukeyHSD(anova_rsr, which = "fertilizer:biochar_ratio")
+#TukeyHSD(anova_rsr, which = "fertilizer:species")
+#TukeyHSD(anova_rsr, which = "biochar_ratio:species")
+#TukeyHSD(anova_rsr, which = "fertilizer:biochar_ratio:species")
+
+# -------
+
+rsr_model <- aov(mean_RSR ~ species + fertilizer + biochar_ratio, data = rsr)
+summary(rsr_model)
+#TukeyHSD(rsr_model, which = "species")
+```
+
+
+
+```{r survival}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(lme4)     
+library(emmeans) 
+library(ggpubr) 
+library(Matrix)
+
+surv_data <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="survival", range="A1:F145")
+head(survival)
+
+surv_data <- surv_data %>%
+  mutate(
+    survival = as.numeric(survival),
+    survival_rate = survival / seeded
+  )
+
+# Summarize survival rate by group
+summary_data <- surv_data %>%
+  group_by(species, fertilizer, `biochar_%`) %>%
+  summarise(
+    mean_survival = mean(survival_rate, na.rm = TRUE),
+    se_survival = sd(survival_rate, na.rm = TRUE) / sqrt(n())
+  )
+
+summary_data$fertilizer <- factor(summary_data$fertilizer, levels = c("none", "half", "full", "double"))
+
+# Plot
+ggplot(summary_data, aes(x = fertilizer, y = mean_survival, fill = factor(`biochar_%`))) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
+  geom_errorbar(
+    aes(ymin = mean_survival - se_survival, ymax = mean_survival + se_survival),
+    width = 0.2,
+    position = position_dodge(width = 0.8)
+  ) +
+  facet_wrap(~ species) +
+  labs(y = "Mean Survival Rate", x = "Fertilizer Treatment", fill = "Biochar %") +
+  theme_minimal()
+
+# ----------
+
+surv_data$survival <- as.numeric(surv_data$survival)
+surv_data$prop_survived <- surv_data$survival / surv_data$seeded
+
+surv_data$fertilizer <- factor(surv_data$fertilizer, levels = c("none", "half", "full", "double"))
+surv_data$species <- factor(surv_data$species)
+surv_data$biochar_percent <- as.factor(surv_data$`biochar_%`)
+
+anova_surv <- aov(prop_survived ~ fertilizer * biochar_percent * species, data = surv_data)
+summary(anova_surv)
+
+#TukeyHSD(anova_surv, which = "species")
+#TukeyHSD(anova_model, which = "fertilizer:biochar_percent")
+#TukeyHSD(anova_surv, which = "fertilizer")
+#TukeyHSD(anova_surv, which = "biochar_percent")
 ```
 
