@@ -28,79 +28,55 @@ resp$fertilizer <- as.factor(resp$fertilizer)
 
 #------------ 
 
-# Prepare data for both Biochar and Fertilizer plots
 biochar_summary <- resp %>%
   group_by(biochar_ratio) %>%
   summarize(mean_resp = mean(respiration, na.rm = TRUE),
             sd_resp = sd(respiration, na.rm = TRUE),
             n = n(),
-            se_resp = sd_resp / sqrt(n))
+            se_resp = sd_resp / sqrt(n)) %>%
+  mutate(
+    treatment = factor(biochar_ratio,
+                       levels = c(0, 25, 50, 100),
+                       labels = c("0%", "25%", "50%", "100%")),
+    plot_type = "Biochar"
+  )
 
+# Summarize by fertilizer
 fert_summary <- resp %>%
   group_by(fertilizer) %>%
   summarize(mean_resp = mean(respiration, na.rm = TRUE),
             sd_resp = sd(respiration, na.rm = TRUE),
             n = n(),
-            se_resp = sd_resp / sqrt(n))
+            se_resp = sd_resp / sqrt(n)) %>%
+  mutate(
+    treatment = factor(fertilizer,
+                       levels = c("none", "half", "full", "double")),
+    plot_type = "Fertilizer"
+  )
 
-# Make fertilizer levels ordered correctly
-fert_summary$fertilizer <- factor(fert_summary$fertilizer, levels = c("fert-0", "fert-.5", "fert-1", "fert-2"))
-
-# Combine the two summaries for easier plotting
-biochar_summary$plot_type <- "Biochar"
-fert_summary$plot_type <- "Fertilizer"
-
-# Bind the data frames together
+# Combine both
 combined_summary <- bind_rows(biochar_summary, fert_summary)
 
-# Plotting with facets
-ggplot(combined_summary, aes(x = factor(ifelse(plot_type == "Biochar", biochar_ratio, fertilizer)), 
-                             y = mean_resp, fill = plot_type)) +
+# Plot
+ggplot(combined_summary, aes(x = treatment, y = mean_resp, fill = plot_type)) +
   geom_bar(stat = "identity", position = "dodge") +
-  geom_errorbar(aes(ymin = mean_resp - se_resp, ymax = mean_resp + se_resp), width = 0.2, position = position_dodge(0.9)) +
+  geom_errorbar(aes(ymin = mean_resp - se_resp, ymax = mean_resp + se_resp),
+                width = 0.2, position = position_dodge(0.9)) +
   facet_wrap(~ plot_type, scales = "free_x") +
-  labs(x = "Treatment", y = "Mean Respiration") +
-  theme_minimal() +
+  labs(x = "Treatment",
+       y = expression("Mean CO"[2]~"flux rates (mmol CO"[2]~"m"^{-2}~"s"^{-1}*")")) +
+  theme_minimal(base_size = 12) +
   scale_fill_manual(values = c("Biochar" = "#4DAF4A", "Fertilizer" = "#377EB8")) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none",  # 🚫 Remove legend entirely
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.8),  # ✅ Box around each facet
+    strip.background = element_rect(fill = "grey90", color = "black"),  # Optional: box around facet labels
+    strip.text = element_text(face = "bold")
+  )
 
 #------------
 
-# Prepare data for both Biochar and Fertilizer combined
-combined_summary <- resp %>%
-  group_by(biochar_ratio, fertilizer) %>%
-  summarize(mean_resp = mean(respiration, na.rm = TRUE),
-            sd_resp = sd(respiration, na.rm = TRUE),
-            n = n(),
-            se_resp = sd_resp / sqrt(n))
-
-# Create a new column that combines the levels of biochar and fertilizer
-combined_summary$biochar_fert_combined <- paste(combined_summary$biochar_ratio, 
-                                                combined_summary$fertilizer, sep = " @ ")
-
-# Ensure the x-axis is ordered first by biochar_ratio, then by fertilizer
-combined_summary$biochar_fert_combined <- factor(combined_summary$biochar_fert_combined,
-                                                 levels = c("0 @ fert-0", "0 @ fert-.5", "0 @ fert-1", "0 @ fert-2",
-                                                            "25 @ fert-0", "25 @ fert-.5", "25 @ fert-1", "25 @ fert-2",
-                                                            "50 @ fert-0", "50 @ fert-.5", "50 @ fert-1", "50 @ fert-2",
-                                                            "100 @ fert-0", "100 @ fert-.5", "100 @ fert-1", "100 @ fert-2"))
-
-# Plot
-ggplot(combined_summary, aes(x = biochar_fert_combined, y = mean_resp, fill = biochar_fert_combined)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  geom_errorbar(aes(ymin = mean_resp - se_resp, ymax = mean_resp + se_resp), 
-                width = 0.2, position = position_dodge(0.9)) +
-  labs(x = "Biochar and Fertilizer Combinations", y = "Mean Respiration") +
-  theme_minimal() +
-  scale_fill_manual(values = c("0 @ fert-0" = "#4DAF4A", "0 @ fert-.5" = "#4DAF4A", 
-                               "0 @ fert-1" = "#4DAF4A", "0 @ fert-2" = "#4DAF4A",
-                               "25 @ fert-0" = "#9B59B6", "25 @ fert-.5" = "#9B59B6", 
-                               "25 @ fert-1" = "#9B59B6", "25 @ fert-2" = "#9B59B6",
-                               "50 @ fert-0" = "#F39C12", "50 @ fert-.5" = "#F39C12", 
-                               "50 @ fert-1" = "#F39C12", "50 @ fert-2" = "#F39C12",
-                               "100 @ fert-0" = "#2C3E50", "100 @ fert-.5" = "#2C3E50", 
-                               "100 @ fert-1" = "#2C3E50", "100 @ fert-2" = "#2C3E50")) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 # ----------
 
@@ -145,6 +121,100 @@ summary(full_anova)
 #TukeyHSD(full_anova, which ="fertilizer:biochar_ratio")
 ```
 
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Summarize respiration by biochar and fertilizer
+combined_summary <- resp %>%
+  group_by(biochar_ratio, fertilizer) %>%
+  summarize(mean_resp = mean(respiration, na.rm = TRUE),
+            sd_resp = sd(respiration, na.rm = TRUE),
+            n = n(),
+            se_resp = sd_resp / sqrt(n),
+            .groups = "drop")
+
+# Convert fertilizer to factor with proper order & labels
+combined_summary$fertilizer <- factor(combined_summary$fertilizer,
+                                     levels = c("none", "half", "full", "double"),
+                                     labels = c("none", "half", "full", "double"))
+
+# Convert biochar_ratio to factor with labels & colors
+combined_summary$biochar_ratio <- factor(combined_summary$biochar_ratio,
+                                         levels = c(0, 25, 50, 100),
+                                         labels = c("0%", "25%", "50%", "100%"))
+
+# Plot
+ggplot(combined_summary, aes(x = fertilizer, y = mean_resp, fill = biochar_ratio)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(ymin = mean_resp - se_resp, ymax = mean_resp + se_resp),
+                width = 0.2, position = position_dodge(width = 0.8)) +
+  labs(x = "Fertilizer Treatment",
+       y = expression("Mean CO"[2]~"flux rates (mmol CO"[2]~"m"^{-2}~"s"^{-1}*")"),
+       fill = "Biochar") +
+  scale_fill_manual(values = c("0%" = "#4DAF4A", 
+                               "25%" = "#9B59B6", 
+                               "50%" = "#F39C12", 
+                               "100%" = "#2C3E50")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        panel.border = element_rect(color = "black", fill = NA))
+
+# ------------
+
+# Summarize respiration by biochar and fertilizer
+combined_summary <- resp %>%
+  group_by(biochar_ratio, fertilizer) %>%
+  summarize(mean_resp = mean(respiration, na.rm = TRUE),
+            sd_resp = sd(respiration, na.rm = TRUE),
+            n = n(),
+            se_resp = sd_resp / sqrt(n),
+            .groups = "drop")
+
+# Factor for fertilizer with ordered levels and labels
+combined_summary$fertilizer <- factor(combined_summary$fertilizer,
+                                     levels = c("none", "half", "full", "double"),
+                                     labels = c("none", "half", "full", "double"))
+
+# Factor for biochar_ratio with labels
+combined_summary$biochar_ratio <- factor(combined_summary$biochar_ratio,
+                                         levels = c(0, 25, 50, 100),
+                                         labels = c("0%", "25%", "50%", "100%"))
+
+# Create combined factor for x axis (biochar + fertilizer)
+combined_summary <- combined_summary %>%
+  mutate(biochar_fert = interaction(biochar_ratio, fertilizer, sep = "_"))
+
+# Define levels for biochar_fert to keep correct order
+combined_summary$biochar_fert <- factor(combined_summary$biochar_fert,
+                                        levels = c(
+                                          "0%_none", "0%_half", "0%_full", "0%_double",
+                                          "25%_none", "25%_half", "25%_full", "25%_double",
+                                          "50%_none", "50%_half", "50%_full", "50%_double",
+                                          "100%_none", "100%_half", "100%_full", "100%_double"
+                                        ))
+
+# Create x axis labels with fertilizer only, repeated for each biochar group
+x_labels <- rep(levels(combined_summary$fertilizer), times = length(levels(combined_summary$biochar_ratio)))
+
+# Plot
+ggplot(combined_summary, aes(x = biochar_fert, y = mean_resp, fill = biochar_ratio)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(ymin = mean_resp - se_resp, ymax = mean_resp + se_resp),
+                width = 0.2, position = position_dodge(width = 0.8)) +
+  scale_x_discrete(labels = x_labels) +
+  labs(x = "Fertilizer Treatment",
+       y = expression("Mean CO"[2]~"flux rates (mmol CO"[2]~"m"^{-2}~"s"^{-1}*")"),
+       fill = "Biochar") +
+  scale_fill_manual(values = c("0%" = "#4DAF4A",
+                               "25%" = "#9B59B6",
+                               "50%" = "#F39C12",
+                               "100%" = "#2C3E50")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        panel.border = element_rect(color = "black", fill = NA))
+
+```
 
 
 ```{r RSR}
@@ -160,41 +230,6 @@ rsr <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="rsr", ra
 head(rsr)
 
 # ------
-
-library(dplyr)
-library(ggplot2)
-
-# Filter for one species, e.g., 'sl'
-rsr_sl <- rsr %>%
-  filter(species == "sl") %>%
-  mutate(fertilizer = factor(fertilizer, levels = c("none", "half", "full", "double")))
-
-rsr_summary <- rsr_sl %>%
-  group_by(biochar_ratio, fertilizer) %>%
-  summarise(
-    se_RSR = sd(mean_RSR, na.rm = TRUE) / sqrt(n()),
-    n = n(),
-    .groups = "drop"
-  )
-
-rsr$fertilizer <- factor(rsr$fertilizer, levels = c("none", "half", "full", "double"))
-
-# Plot bar graph with error bars
-ggplot(rsr, aes(x = factor(biochar_ratio), y = mean_RSR, fill = fertilizer)) +
-  geom_bar(stat = "identity", position = position_dodge()) +
-  facet_wrap(~ species) +
-  theme_minimal() +
-  labs(x = "Biochar Ratio (%)", 
-       y = "Mean Root-to-Shoot Ratio per Tree", 
-       title = "Mean RSR by Biochar Level and Fertilizer Across Species") +
-  scale_fill_manual(values = c("none" = "#a6cee3", 
-                               "half" = "#1f78b4", 
-                               "full" = "#b2df8a", 
-                               "double" = "#33a02c"))
-
-
-# -------
-
 
 # Make sure fertilizer and biochar_ratio are factors
 rsr$fertilizer <- factor(rsr$fertilizer, levels = c("none", "half", "full", "double"))
@@ -220,6 +255,59 @@ summary(rsr_model)
 #TukeyHSD(rsr_model, which = "species")
 ```
 
+```{r}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(lme4)     
+library(emmeans) 
+library(ggpubr) 
+library(Matrix)
+
+
+# Read and recode
+rsr <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="rsr", range="A1:D49")
+
+rsr <- rsr %>%
+  mutate(
+    species = recode(species,
+                     "ll" = "Longleaf Pine",
+                     "lob" = "Loblolly Pine",
+                     "sl" = "Slash Pine"),
+    fertilizer = factor(fertilizer, 
+                        levels = c("none", "half", "full", "double"),
+                        labels = c("None", "Half", "Full", "Double"))
+  )
+
+# Optional filter — remove if plotting all species
+rsr_sl <- rsr %>%
+  filter(species == "Slash Pine")
+
+# Optional summary
+rsr_summary <- rsr_sl %>%
+  group_by(biochar_ratio, fertilizer) %>%
+  summarise(
+    se_RSR = sd(mean_RSR, na.rm = TRUE) / sqrt(n()),
+    n = n(),
+    .groups = "drop"
+  )
+
+# Plot with boxed panels
+ggplot(rsr, aes(x = factor(biochar_ratio), y = mean_RSR, fill = fertilizer)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  facet_wrap(~ species) +
+  theme_minimal() +
+  labs(x = "Biochar Ratio (%)", 
+       y = "Mean Root-to-Shoot Ratio", 
+       title = "") +
+  scale_fill_manual( name = "Fertilizer Treatment",
+                    values = c("None" = "#a6cee3", 
+                               "Half" = "#1f78b4", 
+                               "Full" = "#b2df8a", 
+                               "Double" = "#33a02c")) +
+  theme(panel.border = element_rect(color = "black", fill = NA, linewidth = 1))
+
+```
 
 
 ```{r survival}
@@ -232,7 +320,7 @@ library(ggpubr)
 library(Matrix)
 
 surv_data <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="survival", range="A1:F145")
-head(survival)
+
 
 surv_data <- surv_data %>%
   mutate(
@@ -278,5 +366,52 @@ summary(anova_surv)
 #TukeyHSD(anova_model, which = "fertilizer:biochar_percent")
 #TukeyHSD(anova_surv, which = "fertilizer")
 #TukeyHSD(anova_surv, which = "biochar_percent")
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Recode species names and capitalize fertilizer
+summary_data <- surv_data %>%
+  mutate(
+    species = recode(species,
+                     "ll" = "Longleaf Pine",
+                     "lob" = "Loblolly Pine",
+                     "sl" = "Slash Pine"),
+    fertilizer = factor(fertilizer, 
+                        levels = c("none", "half", "full", "double"),
+                        labels = c("None", "Half", "Full", "Double"))
+  ) %>%
+  group_by(species, fertilizer, `biochar_%`) %>%
+  summarise(
+    mean_survival = mean(survival_rate, na.rm = TRUE),
+    se_survival = sd(survival_rate, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# Plot
+ggplot(summary_data, aes(x = fertilizer, y = mean_survival, fill = factor(`biochar_%`))) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
+  geom_errorbar(
+    aes(ymin = mean_survival - se_survival, ymax = mean_survival + se_survival),
+    width = 0.2,
+    position = position_dodge(width = 0.8)
+  ) +
+  facet_wrap(~ species) +
+  labs(
+    y = "Mean Survival Rate",
+    x = "Fertilizer Treatment",
+    fill = "Biochar %"
+  ) +
+  scale_fill_brewer(palette = "YlGnBu") +  # You can customize the palette
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.border = element_rect(color = "black", fill = NA, size = 0.5),
+    strip.background = element_rect(fill = "gray90", color = "black"),
+    strip.text = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
 ```
 
