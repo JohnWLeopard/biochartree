@@ -415,3 +415,28 @@ ggplot(summary_data, aes(x = fertilizer, y = mean_survival, fill = factor(`bioch
 
 ```
 
+
+```{r germination}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+
+germ_data <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="germination", range="A1:D13")
+
+#glm(cbind(germinated, sowed - germinated) ~ biochar_level * species, 
+    #family = binomial, data = germ_data)
+
+germ_data$germ_rate <- germ_data$germinated / germ_data$sowed
+
+germ_data$species <- as.factor(germ_data$species)
+
+model <- lm(germ_rate ~ species * biochar_level, data = germ_data)
+anova(model) 
+summary(model)
+
+library(emmeans)
+
+# Main effects of species
+emmeans(model, pairwise ~ species, adjust = "tukey")
+```
+
