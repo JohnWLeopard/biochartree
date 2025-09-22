@@ -15,7 +15,7 @@ library(Matrix)
 
 
 resp <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="respiration", range="A1:E193")
-head(resp)
+#head(resp)
 
 resp <- resp %>%
   mutate(respiration = ifelse(replication == 2 & day == 2, NA, respiration))
@@ -27,6 +27,7 @@ resp$day <- as.factor(resp$day)
 resp$fertilizer <- as.factor(resp$fertilizer)
 
 #------------ 
+
 
 biochar_summary <- resp %>%
   group_by(biochar_ratio) %>%
@@ -54,6 +55,14 @@ fert_summary <- resp %>%
     plot_type = "Fertilizer"
   )
 
+
+# significant letters
+  # Biochar letters: 0%, 25%, 50%, 100%
+  biochar_summary$sig_letter <- c("a", "a", "a", "b")
+
+  # Fertilizer letters: none, half, full, double
+  fert_summary$sig_letter <- c("b", "b", "b", "a")
+  
 # Combine both
 combined_summary <- bind_rows(biochar_summary, fert_summary)
 
@@ -62,6 +71,8 @@ ggplot(combined_summary, aes(x = treatment, y = mean_resp, fill = plot_type)) +
   geom_bar(stat = "identity", position = "dodge") +
   geom_errorbar(aes(ymin = mean_resp - se_resp, ymax = mean_resp + se_resp),
                 width = 0.2, position = position_dodge(0.9)) +
+  geom_text(aes(label = sig_letter, y = mean_resp + se_resp + 0.02),  # 0.02 is offset above error bar
+            position = position_dodge(0.9), size = 5) +
   facet_wrap(~ plot_type, scales = "free_x") +
   labs(x = "Treatment",
        y = expression("Mean CO"[2]~"flux rates (mmol CO"[2]~"m"^{-2}~"s"^{-1}*")")) +
@@ -77,9 +88,6 @@ ggplot(combined_summary, aes(x = treatment, y = mean_resp, fill = plot_type)) +
 
 #------------
 
-
-# ----------
-
 resp %>%
   group_by(fertilizer, biochar_ratio, day) %>%
   summarise(mean_resp = mean(respiration, na.rm = TRUE),
@@ -87,15 +95,15 @@ resp %>%
             n = sum(!is.na(respiration))) %>%
   arrange(fertilizer, biochar_ratio, day)
 
-ggplot(resp, aes(x = day, y = respiration, color = factor(biochar_ratio))) +
-  geom_point(position = position_jitter(width = 0.1), alpha = 0.7) +
-  geom_smooth(method = "loess", se = FALSE) +
-  facet_wrap(~fertilizer) +
-  theme_minimal() +
-  labs(title = "Respiration over Time",
-       x = "Day",
-       y = "Respiration Rate",
-       color = "Biochar Ratio (%)")
+# ggplot(resp, aes(x = day, y = respiration, color = factor(biochar_ratio))) +
+  # geom_point(position = position_jitter(width = 0.1), alpha = 0.7) +
+  # geom_smooth(method = "loess", se = FALSE) +
+  # facet_wrap(~fertilizer) +
+  # theme_minimal() +
+  # labs(title = "Respiration over Time",
+       # x = "Day",
+       # y = "Respiration Rate",
+       # color = "Biochar Ratio (%)")
 
 #--------
  
@@ -121,6 +129,7 @@ summary(full_anova)
 #TukeyHSD(full_anova, which ="fertilizer:biochar_ratio")
 ```
 
+
 ```{r}
 library(dplyr)
 library(ggplot2)
@@ -145,7 +154,7 @@ combined_summary$biochar_ratio <- factor(combined_summary$biochar_ratio,
                                          labels = c("0%", "25%", "50%", "100%"))
 
 # Plot
-ggplot(combined_summary, aes(x = fertilizer, y = mean_resp, fill = biochar_ratio)) +
+a <-ggplot(combined_summary, aes(x = fertilizer, y = mean_resp, fill = biochar_ratio)) +
   geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
   geom_errorbar(aes(ymin = mean_resp - se_resp, ymax = mean_resp + se_resp),
                 width = 0.2, position = position_dodge(width = 0.8)) +
@@ -203,13 +212,13 @@ ggplot(combined_summary, aes(x = biochar_fert, y = mean_resp, fill = biochar_rat
   geom_errorbar(aes(ymin = mean_resp - se_resp, ymax = mean_resp + se_resp),
                 width = 0.2, position = position_dodge(width = 0.8)) +
   scale_x_discrete(labels = x_labels) +
+  scale_fill_discrete(
+    name = "Biochar (%)",               
+    labels = c("0", "25", "50", "100")
+  ) +
   labs(x = "Fertilizer Treatment",
        y = expression("Mean CO"[2]~"flux rates (mmol CO"[2]~"m"^{-2}~"s"^{-1}*")"),
        fill = "Biochar") +
-  scale_fill_manual(values = c("0%" = "#4DAF4A",
-                               "25%" = "#9B59B6",
-                               "50%" = "#F39C12",
-                               "100%" = "#2C3E50")) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         panel.border = element_rect(color = "black", fill = NA))
@@ -227,7 +236,7 @@ library(ggpubr)
 library(Matrix)
 
 rsr <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="rsr", range="A1:D49")
-head(rsr)
+#head(rsr)
 
 # ------
 
@@ -299,13 +308,13 @@ ggplot(rsr, aes(x = factor(biochar_ratio), y = mean_RSR, fill = fertilizer)) +
   theme_minimal() +
   labs(x = "Biochar Ratio (%)", 
        y = "Mean Root-to-Shoot Ratio", 
-       title = "") +
-  scale_fill_manual( name = "Fertilizer Treatment",
-                    values = c("None" = "#a6cee3", 
-                               "Half" = "#1f78b4", 
-                               "Full" = "#b2df8a", 
-                               "Double" = "#33a02c")) +
-  theme(panel.border = element_rect(color = "black", fill = NA, linewidth = 1))
+       title = "",
+       fill = "Fertilizer Treatment") +
+  theme(
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 1),
+    strip.background = element_rect(fill = "grey90", color = "black"),  # grey box behind facet labels
+    strip.text = element_text(face = "bold")                            # bold text in strips
+  )
 
 ```
 
@@ -339,16 +348,16 @@ summary_data <- surv_data %>%
 summary_data$fertilizer <- factor(summary_data$fertilizer, levels = c("none", "half", "full", "double"))
 
 # Plot
-ggplot(summary_data, aes(x = fertilizer, y = mean_survival, fill = factor(`biochar_%`))) +
-  geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
-  geom_errorbar(
-    aes(ymin = mean_survival - se_survival, ymax = mean_survival + se_survival),
-    width = 0.2,
-    position = position_dodge(width = 0.8)
-  ) +
-  facet_wrap(~ species) +
-  labs(y = "Mean Survival Rate", x = "Fertilizer Treatment", fill = "Biochar %") +
-  theme_minimal()
+# ggplot(summary_data, aes(x = fertilizer, y = mean_survival, fill = factor(`biochar_%`))) +
+  # geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
+  # geom_errorbar(
+    # aes(ymin = mean_survival - se_survival, ymax = mean_survival + se_survival),
+    # width = 0.2,
+    # position = position_dodge(width = 0.8)
+  # ) +
+  # facet_wrap(~ species) +
+  # labs(y = "Mean Survival Rate", x = "Fertilizer Treatment", fill = "Biochar %") +
+  # theme_minimal()
 
 # ----------
 
@@ -363,16 +372,51 @@ anova_surv <- aov(prop_survived ~ fertilizer * biochar_percent * species, data =
 summary(anova_surv)
 
 #TukeyHSD(anova_surv, which = "species")
-#TukeyHSD(anova_model, which = "fertilizer:biochar_percent")
+#TukeyHSD(anova_surv, which = "fertilizer:biochar_percent")
 #TukeyHSD(anova_surv, which = "fertilizer")
 #TukeyHSD(anova_surv, which = "biochar_percent")
+
+# ----------
+
+species_biochar_fert_summary <- surv_data %>%
+  group_by(species, biochar_percent, fertilizer) %>%
+  summarise(
+    mean_survival = mean(prop_survived, na.rm = TRUE),
+    se_survival = sd(prop_survived, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+#species_biochar_fert_summary
+#write.csv(species_biochar_fert_summary, "C:/Users/jwl0037/Downloads/survival_summary.csv", row.names = FALSE)
+
+# ----------
+
+species_biochar_summary <- surv_data %>%
+  group_by(species, biochar_percent) %>%
+  summarise(
+    mean_survival = mean(prop_survived, na.rm = TRUE),
+    se_survival = sd(prop_survived, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+#species_biochar_summary
+
+# -----------
+
+fertilizer_summary <- surv_data %>%
+  group_by(fertilizer) %>%
+  summarise(
+    mean_survival = mean(prop_survived, na.rm = TRUE),
+    se_survival = sd(prop_survived, na.rm = TRUE) / sqrt(n())
+  )
+
+#fertilizer_summary
 ```
 
-```{r}
-library(dplyr)
-library(ggplot2)
 
-# Recode species names and capitalize fertilizer
+```{r Survival Figure}
+library(scales)  # for percent_format
+
 summary_data <- surv_data %>%
   mutate(
     species = recode(species,
@@ -381,7 +425,7 @@ summary_data <- surv_data %>%
                      "sl" = "Slash Pine"),
     fertilizer = factor(fertilizer, 
                         levels = c("none", "half", "full", "double"),
-                        labels = c("None", "Half", "Full", "Double"))
+                        labels = c("none", "half", "full", "double"))
   ) %>%
   group_by(species, fertilizer, `biochar_%`) %>%
   summarise(
@@ -390,21 +434,22 @@ summary_data <- surv_data %>%
     .groups = "drop"
   )
 
-# Plot
-ggplot(summary_data, aes(x = fertilizer, y = mean_survival, fill = factor(`biochar_%`))) +
+library(scales)  # for percent_format
+
+p <- ggplot(summary_data, aes(x = fertilizer, y = mean_survival * 100, fill = factor(`biochar_%`))) +
   geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
   geom_errorbar(
-    aes(ymin = mean_survival - se_survival, ymax = mean_survival + se_survival),
+    aes(ymin = (mean_survival - se_survival) * 100, ymax = (mean_survival + se_survival) * 100),
     width = 0.2,
     position = position_dodge(width = 0.8)
   ) +
   facet_wrap(~ species) +
   labs(
-    y = "Mean Survival Rate",
+    y = "Mean Survival Rate (%)",
     x = "Fertilizer Treatment",
     fill = "Biochar %"
   ) +
-  scale_fill_brewer(palette = "YlGnBu") +  # You can customize the palette
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
   theme_minimal(base_size = 13) +
   theme(
     panel.border = element_rect(color = "black", fill = NA, size = 0.5),
@@ -413,6 +458,9 @@ ggplot(summary_data, aes(x = fertilizer, y = mean_survival, fill = factor(`bioch
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
+plot(p)
+
+#ggsave("survival_plot.png", plot = p, width = 12, height = 8, dpi = 600, bg = "white")
 ```
 
 
@@ -437,6 +485,6 @@ summary(model)
 library(emmeans)
 
 # Main effects of species
-emmeans(model, pairwise ~ species, adjust = "tukey")
+#emmeans(model, pairwise ~ species, adjust = "tukey")
 ```
 
