@@ -235,7 +235,7 @@ library(emmeans)
 library(ggpubr) 
 library(Matrix)
 
-rsr <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="rsr", range="A1:D49")
+rsr <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet="rsr", range="A1:D49")
 #head(rsr)
 
 # ------
@@ -260,9 +260,58 @@ rsr$species <- factor(rsr$species)
 # -------
 
 rsr_model <- aov(mean_RSR ~ species + fertilizer + biochar_ratio, data = rsr)
-summary(rsr_model)
+#summary(rsr_model)
 #TukeyHSD(rsr_model, which = "species")
+
+# -------
+
+# Subset for loblolly
+loblolly_rsr <- rsr %>% filter(species == "lob") %>% droplevels()
+
+# One-way ANOVA for fertilizer
+anova_fert <- aov(mean_RSR ~ fertilizer, data = loblolly_rsr)
+#summary(anova_fert)
+#TukeyHSD(anova_fert)
+
+# One-way ANOVA for biochar ratio
+anova_bio <- aov(mean_RSR ~ biochar_ratio, data = loblolly_rsr)
+#summary(anova_bio)
+#TukeyHSD(anova_bio)
+
+# ------
+
+# Subset to longleaf
+longleaf_rsr <- rsr %>% filter(species == "ll") %>% droplevels()
+
+# One-way ANOVA for fertilizer
+anova_fert_longleaf <- aov(mean_RSR ~ fertilizer, data = longleaf_rsr)
+#summary(anova_fert_longleaf)
+#TukeyHSD(anova_fert_longleaf)
+
+# One-way ANOVA for biochar_ratio
+anova_bio_longleaf <- aov(mean_RSR ~ biochar_ratio, data = longleaf_rsr)
+#summary(anova_bio_longleaf)
+#TukeyHSD(anova_bio_longleaf)
+# ------
+
+# Subset to slash
+slash_rsr <- rsr %>% filter(species == "sl") %>% droplevels()
+
+# One-way ANOVA for fertilizer
+anova_fert_slash <- aov(mean_RSR ~ fertilizer, data = slash_rsr)
+#TukeyHSD(anova_fert_slash)
+
+# One-way ANOVA for biochar_ratio
+anova_bio_slash <- aov(mean_RSR ~ biochar_ratio, data = slash_rsr)
+
+#TukeyHSD(anova_bio_slash)
+
+# ------
+
+
 ```
+
+
 
 ```{r}
 library(readxl)
@@ -275,7 +324,7 @@ library(Matrix)
 
 
 # Read and recode
-rsr <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="rsr", range="A1:D49")
+rsr <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet="rsr", range="A1:D49")
 
 rsr <- rsr %>%
   mutate(
@@ -328,7 +377,7 @@ library(emmeans)
 library(ggpubr) 
 library(Matrix)
 
-surv_data <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="survival", range="A1:F145")
+surv_data <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet="survival", range="A1:F145")
 
 
 surv_data <- surv_data %>%
@@ -434,7 +483,7 @@ summary_data <- surv_data %>%
     .groups = "drop"
   )
 
-library(scales)  # for percent_format
+library(scales) 
 
 p <- ggplot(summary_data, aes(x = fertilizer, y = mean_survival * 100, fill = factor(`biochar_%`))) +
   geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
@@ -449,7 +498,7 @@ p <- ggplot(summary_data, aes(x = fertilizer, y = mean_survival * 100, fill = fa
     x = "Fertilizer Treatment",
     fill = "Biochar %"
   ) +
-  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  scale_y_continuous(labels = scales::number_format(scale = 1)) +
   theme_minimal(base_size = 13) +
   theme(
     panel.border = element_rect(color = "black", fill = NA, size = 0.5),
@@ -469,7 +518,7 @@ library(readxl)
 library(dplyr)
 library(ggplot2)
 
-germ_data <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="germination", range="A1:D13")
+germ_data <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet="germination", range="A1:D13")
 
 #glm(cbind(germinated, sowed - germinated) ~ biochar_level * species, 
     #family = binomial, data = germ_data)
@@ -486,5 +535,56 @@ library(emmeans)
 
 # Main effects of species
 #emmeans(model, pairwise ~ species, adjust = "tukey")
+```
+
+```{r}
+# Load libraries
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(emmeans)
+
+# Read your data
+germ_data <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", 
+                        sheet = "germination", range = "A1:D13")
+
+# Ensure factors are correct
+germ_data <- germ_data %>%
+  mutate(
+    biochar_level = factor(biochar_level, levels = c("0", "25", "50", "100")),
+    species = factor(species)
+  )
+
+# Calculate germination rate (%)
+germ_data <- germ_data %>%
+  mutate(germ_rate = (germinated / sowed) * 100)
+
+# ----- Two-way ANOVA -----
+anova_germ <- aov(germ_rate ~ species * biochar_level, data = germ_data)
+#summary(anova_germ)
+
+# Tukey post-hoc for species differences
+#TukeyHSD(anova_germ, which = "species")
+
+# ----- Get means ± SE by species -----
+summary_table <- germ_data %>%
+  group_by(species) %>%
+  summarise(
+    mean_rate = mean(germ_rate),
+    se_rate = sd(germ_rate) / sqrt(n())
+  )
+
+print(summary_table)
+
+# Optional: also see by biochar_level if you want to mention no treatment effect
+summary_table2 <- germ_data %>%
+  group_by(biochar_level) %>%
+  summarise(
+    mean_rate = mean(germ_rate),
+    se_rate = sd(germ_rate) / sqrt(n())
+  )
+
+print(summary_table2)
+
 ```
 
