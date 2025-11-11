@@ -380,7 +380,7 @@ library(emmeans)
 library(ggpubr) 
 library(Matrix)
 
-surv_data <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet="survival", range="A1:F145")
+surv_data <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="survival", range="A1:F145")
 
 
 surv_data <- surv_data %>%
@@ -477,7 +477,7 @@ summary_data <- surv_data %>%
                      "sl" = "Slash Pine"),
     fertilizer = factor(fertilizer, 
                         levels = c("none", "half", "full", "double"),
-                        labels = c("none", "half", "full", "double"))
+                        labels = c("none", "1/2-standard", "standard", "2×-standard"))
   ) %>%
   group_by(species, fertilizer, `biochar_%`) %>%
   summarise(
@@ -498,8 +498,8 @@ p <- ggplot(summary_data, aes(x = fertilizer, y = mean_survival * 100, fill = fa
   facet_wrap(~ species) +
   labs(
     y = "Mean Survival Rate (%)",
-    x = "Fertilizer Treatment",
-    fill = "Biochar %"
+    x = "Fertilizer Rate",
+    fill = "Biochar Level (%)"
   ) +
   scale_y_continuous(labels = scales::number_format(scale = 1)) +
   theme_minimal(base_size = 13) +
