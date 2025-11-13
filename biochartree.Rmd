@@ -78,7 +78,7 @@ ggplot(combined_summary, aes(x = treatment, y = mean_resp, fill = plot_type)) +
             position = position_dodge(0.9), size = 5) +
   facet_wrap(~ plot_type, scales = "free_x") +
   labs(x = "Treatment",
-       y = expression("Mean CO"[2]~"flux rates (mmol CO"[2]~"m"^{-2}~"s"^{-1}*")")) +
+       y = expression("Mean CO"[2]~"flux rates (µmol CO "[2]~"m"^{-2}~"s"^{-1}*")")) +
   theme_minimal(base_size = 12) +
   scale_fill_manual(values = c("Biochar Level" = "#4DAF4A", "Fertilizer Rate" = "#377EB8")) +
   theme(
@@ -220,7 +220,7 @@ ggplot(combined_summary, aes(x = biochar_fert, y = mean_resp, fill = biochar_rat
     labels = c("0", "25", "50", "100")
   ) +
   labs(x = "Fertilizer Rates",
-       y = expression("Mean CO"[2]~"flux rates (mmol CO"[2]~"m"^{-2}~"s"^{-1}*")"),
+       y = expression("Mean CO "[2]~"flux rates (µmol CO"[2]~"m"^{-2}~"s"^{-1}*")"),
        fill = "Biochar") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
@@ -263,7 +263,7 @@ rsr$species <- factor(rsr$species)
 # -------
 
 rsr_model <- aov(mean_RSR ~ species + fertilizer + biochar_ratio, data = rsr)
-#summary(rsr_model)
+summary(rsr_model)
 #TukeyHSD(rsr_model, which = "species")
 
 # -------
