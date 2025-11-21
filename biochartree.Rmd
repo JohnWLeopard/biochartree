@@ -74,7 +74,7 @@ ggplot(combined_summary, aes(x = treatment, y = mean_resp, fill = plot_type)) +
   geom_bar(stat = "identity", position = "dodge") +
   geom_errorbar(aes(ymin = mean_resp - se_resp, ymax = mean_resp + se_resp),
                 width = 0.2, position = position_dodge(0.9)) +
-  geom_text(aes(label = sig_letter, y = mean_resp + se_resp + 0.02),  # 0.02 is offset above error bar
+  geom_text(aes(label = sig_letter, y = mean_resp + se_resp + 0.005),  # 0.02 is offset above error bar
             position = position_dodge(0.9), size = 5) +
   facet_wrap(~ plot_type, scales = "free_x") +
   labs(x = "Treatment",
@@ -97,16 +97,6 @@ resp %>%
             sd_resp = sd(respiration, na.rm = TRUE),
             n = sum(!is.na(respiration))) %>%
   arrange(fertilizer, biochar_ratio, day)
-
-# ggplot(resp, aes(x = day, y = respiration, color = factor(biochar_ratio))) +
-  # geom_point(position = position_jitter(width = 0.1), alpha = 0.7) +
-  # geom_smooth(method = "loess", se = FALSE) +
-  # facet_wrap(~fertilizer) +
-  # theme_minimal() +
-  # labs(title = "Respiration over Time",
-       # x = "Day",
-       # y = "Respiration Rate",
-       # color = "Biochar Ratio (%)")
 
 #--------
  
