@@ -581,3 +581,76 @@ print(summary_table2)
 
 ```
 
+
+```{r Biomass}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+
+# bio_data <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet = "biomass", range = "A1:D49")
+
+bio_data <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet = "biomass", range = "A1:D49")
+
+bio_data$species    <- factor(bio_data$species)
+bio_data$fertilizer <- factor(bio_data$fertilizer)
+bio_data$biochar    <- factor(bio_data$biochar)
+
+# str(bio_data)
+
+# ----------
+
+# For slash pine
+sl_data <- bio_data[bio_data$species == "sl", ]
+
+aov_sl <- aov(biomass ~ fertilizer + biochar, data = sl_data)
+summary(aov_sl)
+
+#-----------------
+
+# For longleaf pine
+ll_data <- bio_data[bio_data$species == "ll", ]
+ll_aov <- aov(biomass ~ fertilizer + biochar, data = ll_data)
+summary(ll_aov)
+
+#-----------------
+
+# For loblolly pine
+lob_data <- bio_data[bio_data$species == "lob", ]
+lob_aov <- aov(biomass ~ fertilizer + biochar, data = lob_data)
+summary(lob_aov)
+
+# ------------
+
+bio_data <- bio_data %>%
+  mutate(
+    species = recode(species,
+                     "ll" = "Longleaf Pine",
+                     "lob" = "Loblolly Pine",
+                     "sl" = "Slash Pine"),
+    fertilizer = factor(fertilizer, 
+                        levels = c("none", "half", "full", "double"),
+                        labels = c("none", "1/2-standard", "standard", "2×-standard"))
+  )
+
+# Bar graph: biochar on x-axis, fertilizer as fill
+ggplot(bio_data, aes(x = factor(biochar), y = biomass, fill = fertilizer)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  facet_wrap(~species) +
+  labs(
+    x = "Biochar Level (%)",
+    y = "Biomass per Seedling (g)",
+    fill = "Fertilizer Rate"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 1),
+    strip.background = element_rect(fill = "grey90", color = "black"),
+    strip.text = element_text(face = "bold"),
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 0, hjust = 0.5)
+  )
+
+
+```
+
+
