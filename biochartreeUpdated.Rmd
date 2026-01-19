@@ -1,0 +1,749 @@
+---
+title: "BiocharTree-1/19/26"
+output: html_notebook
+---
+
+### Germination Data ###
+
+```{r Germination}
+# =========================
+# 1. Load libraries
+# =========================
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(emmeans)
+
+# =========================
+# 2. Import data
+# =========================
+germ_data <- read_excel(
+  "C:/Users/jwl0037/Downloads/biochartree.xlsx",
+  sheet = "germination",
+  range = "A1:D13"  # adjust if needed
+)
+
+# =========================
+# 3. Clean & transform
+# =========================
+germ_data <- germ_data %>%
+  mutate(
+    species = factor(species),
+    biochar_level = factor(biochar_level, levels = c("0", "25", "50", "100")),
+    germ_rate = (germinated / sowed) * 100  # germination rate in %
+  )
+
+# =========================
+# 4. Statistical analysis
+# =========================
+
+# Two-way ANOVA: germination rate ~ species * biochar level
+anova_germ <- aov(germ_rate ~ species * biochar_level, data = germ_data)
+summary(anova_germ)
+
+# Optional: Tukey post-hoc test for species differences
+# tukey_species <- TukeyHSD(anova_germ, which = "species")
+# tukey_species
+
+# Optional: emmeans for pairwise comparisons
+# emmeans(model, pairwise ~ species, adjust = "tukey")
+
+# =========================
+# 5. Summarize data
+# =========================
+
+# By species
+summary_species <- germ_data %>%
+  group_by(species) %>%
+  summarise(
+    mean_rate = mean(germ_rate),
+    se_rate = sd(germ_rate) / sqrt(n()),
+    .groups = "drop"
+  )
+
+print(summary_species)
+
+# By biochar level
+summary_biochar <- germ_data %>%
+  group_by(biochar_level) %>%
+  summarise(
+    mean_rate = mean(germ_rate),
+    se_rate = sd(germ_rate) / sqrt(n()),
+    .groups = "drop"
+  )
+
+print(summary_biochar)
+
+# By species + biochar (for plotting if needed)
+summary_species_biochar <- germ_data %>%
+  group_by(species, biochar_level) %>%
+  summarise(
+    mean_rate = mean(germ_rate),
+    se_rate = sd(germ_rate) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# =========================
+# 6. (Optional) Plot: Germination
+# =========================
+# Uncomment and adjust if you want a bar plot similar to survival/respiration plots
+
+# ggplot(summary_species_biochar, aes(x = species, y = mean_rate, fill = biochar_level)) +
+#   geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
+#   geom_errorbar(aes(ymin = mean_rate - se_rate, ymax = mean_rate + se_rate),
+#                 width = 0.2, position = position_dodge(width = 0.8)) +
+#   labs(x = "Species", y = "Mean Germination Rate (%)", fill = "Biochar Level (%)") +
+#   theme_minimal(base_size = 13)
+
+```
+
+### Survival Data and Figures 1 ###
+
+```{r Survival and Fig 1}
+# =========================
+# 1. Load libraries
+# =========================
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(lme4)
+library(emmeans)
+library(ggpubr)
+library(Matrix)
+library(scales)
+library(ggpattern)
+# =========================
+# 2. Import data
+# =========================
+# Update path as needed
+surv_data <- read_excel(
+  "C:/Users/jwl0037/Downloads/biochartree.xlsx",
+  sheet = "survival",
+  range = "A1:F145"
+)
+
+# =========================
+# 3. Clean & transform
+# =========================
+surv_data <- surv_data %>%
+  mutate(
+    survival = as.numeric(survival),
+    survival_rate = survival / seeded,
+    species = recode(species,
+                     "ll" = "Longleaf Pine",
+                     "lob" = "Loblolly Pine",
+                     "sl" = "Slash Pine"),
+    fertilizer = factor(fertilizer,
+                        levels = c("none", "half", "full", "double"),
+                        labels = c("none", "1/2-standard", "standard", "2×-standard")),
+    biochar_percent = as.factor(`biochar_%`)
+  )
+
+# =========================
+# 4. Summarize data
+# =========================
+
+# By species + fertilizer + biochar
+summary_data <- surv_data %>%
+  group_by(species, fertilizer, biochar_percent) %>%
+  summarise(
+    mean_survival = mean(survival_rate, na.rm = TRUE),
+    se_survival = sd(survival_rate, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# By species + biochar only
+species_biochar_summary <- surv_data %>%
+  group_by(species, biochar_percent) %>%
+  summarise(
+    mean_survival = mean(survival_rate, na.rm = TRUE),
+    se_survival = sd(survival_rate, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# By species + fertilizer only
+fertilizer_summary <- surv_data %>%
+  group_by(fertilizer) %>%
+  summarise(
+    mean_survival = mean(survival_rate, na.rm = TRUE),
+    se_survival = sd(survival_rate, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# =========================
+# 5. ANOVA
+# =========================
+anova_surv <- aov(survival_rate ~ fertilizer * biochar_percent * species, data = surv_data)
+summary(anova_surv)
+
+# =========================
+# 6. Plot: Survival
+# =========================
+p_survival <- ggplot(summary_data, 
+aes(x = fertilizer, y = mean_survival * 100, fill = biochar_percent, pattern = biochar_percent)) +
+  geom_bar_pattern(
+    stat = "identity",
+    position = position_dodge(width = 0.8),
+    pattern_fill = "black",
+    pattern_angle = 45,
+    pattern_density = 0.01,
+    pattern_spacing = 0.05
+  ) +
+  geom_errorbar(
+    aes(ymin = (mean_survival - se_survival) * 100,
+        ymax = (mean_survival + se_survival) * 100),
+    width = 0.2,
+    position = position_dodge(width = 0.8)
+  ) +
+  facet_wrap(~ species) +
+  labs(
+    y = "Mean Survival Rate (%)",
+    x = "Fertilizer Rate",
+    fill = "Biochar Level (%)"
+  ) +
+  scale_fill_manual(
+    name = "Biochar Level (%)",
+    values = c("0" = "#440154",
+               "25" = "#31688E",
+               "50" = "#35B779", 
+               "100" = "#D9F0A3"),
+  labels = c("0", "25", "50", "100")
+  ) +
+  scale_pattern_manual(
+    values = c("0" = "none",
+               "25" = "none",
+               "50" = "none",
+               "100" = "none"),
+    name = "Biochar Level (%)"
+  ) +
+  #scale_fill_grey(start = 0.2, end = 0.9) +
+  scale_y_continuous(labels = number_format(scale = 1)) +
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.border = element_rect(color = "black", fill = NA, size = 0.5),
+    strip.background = element_rect(fill = "gray90", color = "black"),
+    strip.text = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+plot(p_survival)
+
+# Optional: Save figure
+# ggsave("survival_plot.png", plot = p_survival, width = 12, height = 8, dpi = 600, bg = "white")
+
+```
+
+### CO2 Flux Rates Data and Figure 2 & 3 ###
+
+```{r CO2 Flux and Fig 2 & 3}
+# =========================
+# 1. Load libraries
+# =========================
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(ggpattern)
+library(lme4)
+library(emmeans)
+library(ggpubr)
+library(Matrix)
+
+# =========================
+# 2. Import data
+# =========================
+resp <- read_excel(
+  "C:/Users/jwl0037/Downloads/biochartree.xlsx",
+  sheet = "respiration",
+  range = "A1:E193"
+)
+
+# Optional: remove specific outlier (replication 2 & day 2)
+resp <- resp %>%
+  mutate(respiration = ifelse(replication == 2 & day == 2, NA, respiration))
+
+# =========================
+# 3. Clean & transform
+# =========================
+resp <- resp %>%
+  mutate(
+    biochar_ratio = factor(biochar_ratio, levels = c(0, 25, 50, 100),
+                           labels = c("0%", "25%", "50%", "100%")),
+    fertilizer = factor(fertilizer, levels = c("none", "half", "full", "double"),
+                        labels = c("none", "1/2-standard", "standard", "2×-standard")),
+    day = factor(day),
+    replication = factor(replication)
+  )
+
+# =========================
+# 4. Summarize data
+# =========================
+
+# Summary by biochar
+biochar_summary <- resp %>%
+  group_by(biochar_ratio) %>%
+  summarise(
+    mean_resp = mean(respiration, na.rm = TRUE),
+    sd_resp = sd(respiration, na.rm = TRUE),
+    n = sum(!is.na(respiration)),
+    se_resp = sd_resp / sqrt(n),
+    .groups = "drop"
+  ) %>%
+  mutate(plot_type = "Biochar Level",
+         sig_letter = c("a", "a", "a", "b"))  # example letters
+
+# Summary by fertilizer
+fert_summary <- resp %>%
+  group_by(fertilizer) %>%
+  summarise(
+    mean_resp = mean(respiration, na.rm = TRUE),
+    sd_resp = sd(respiration, na.rm = TRUE),
+    n = sum(!is.na(respiration)),
+    se_resp = sd_resp / sqrt(n),
+    .groups = "drop"
+  ) %>%
+  mutate(plot_type = "Fertilizer Rate",
+         sig_letter = c("b", "b", "b", "a"))  # example letters
+
+# Combine summaries for plotting
+combined_summary <- bind_rows(biochar_summary, fert_summary)
+
+# Summary by biochar + fertilizer (for patterned bars)
+combined_summary <- resp %>%
+  group_by(biochar_ratio, fertilizer) %>%
+  summarise(
+    mean_resp = mean(respiration, na.rm = TRUE),
+    sd_resp = sd(respiration, na.rm = TRUE),
+    n = sum(!is.na(respiration)),
+    se_resp = sd_resp / sqrt(n),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    biochar_fert = interaction(biochar_ratio, fertilizer, sep = "_"),
+    biochar_fert = factor(biochar_fert,
+                           levels = c(
+                             "0%_none", "0%_1/2-standard", "0%_standard", "0%_2×-standard",
+                             "25%_none", "25%_1/2-standard", "25%_standard", "25%_2×-standard",
+                             "50%_none", "50%_1/2-standard", "50%_standard", "50%_2×-standard",
+                             "100%_none", "100%_1/2-standard", "100%_standard", "100%_2×-standard"
+                           ))
+  )
+
+# =========================
+# 5. Statistical analysis
+# =========================
+# ANOVA for respiration
+resp_clean <- resp %>% filter(!is.na(respiration))
+model_aov <- aov(respiration ~ fertilizer * biochar_ratio * day, data = resp_clean)
+summary(model_aov)
+
+# Optional TukeyHSD post-hoc tests
+# TukeyHSD(model_aov, which = "fertilizer")
+# TukeyHSD(model_aov, which = "biochar_ratio")
+# TukeyHSD(model_aov, which = "fertilizer:biochar_ratio")
+
+# =========================
+# 6. Plot: Respiration with patterns
+# =========================
+x_labels <- rep(levels(combined_summary$fertilizer), times = length(levels(combined_summary$biochar_ratio)))
+
+ggplot(combined_summary, aes(x = biochar_fert, y = mean_resp,
+                             fill = biochar_ratio, pattern = biochar_ratio)) +
+  geom_bar_pattern(
+    stat = "identity",
+    position = position_dodge(width = 0),
+    pattern_fill = "black",
+    pattern_angle = 45,
+    pattern_density = 0,
+    pattern_spacing = 0.05
+  ) +
+  geom_errorbar(aes(ymin = mean_resp - se_resp, ymax = mean_resp + se_resp),
+                width = 0.2, position = position_dodge(width = 0.8)) +
+  scale_fill_manual(
+    name = "Biochar Level (%)",
+    values = c("0%" = "#440154",
+               "25%" = "#31688E",
+               "50%" = "#35B779", 
+               "100%" = "#D9F0A3"),
+    labels = c("0%", "25%", "50%", "100%")
+  ) +
+  scale_pattern_manual(
+    values = c("0" = "none",
+               "25" = "none",
+               "50" = "none",
+               "100" = "none"),
+    name = "Biochar Level (%)"
+  ) +
+  guides(
+    fill = guide_legend(override.aes = list(pattern = c("none", "stripe", "crosshatch", "circle"))),
+    pattern = "none"
+  ) +
+  scale_x_discrete(labels = x_labels) +
+  labs(x = "Fertilizer Rates",
+       y = expression("Mean CO "[2]~"flux rates (µmol CO"[2]~"m"^{-2}~"s"^{-1}*")")) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.border = element_rect(color = "black", fill = NA),
+    strip.background = element_rect(fill = "grey90", color = "black"),
+    strip.text = element_text(face = "bold")
+  )
+
+```
+
+## Fig. 2 ##
+```{r respiration}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(lme4)     
+library(emmeans) 
+library(ggpubr) 
+library(Matrix)
+
+#resp <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet="respiration", range="A1:E193")
+resp <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="respiration", range="A1:E193")
+#head(resp)
+
+resp <- resp %>%
+  mutate(respiration = ifelse(replication == 2 & day == 2, NA, respiration))
+
+#------------ 
+
+resp$biochar_ratio <- as.factor(resp$biochar_ratio)
+resp$day <- as.factor(resp$day)
+resp$fertilizer <- as.factor(resp$fertilizer)
+
+#------------ 
+
+
+biochar_summary <- resp %>%
+  group_by(biochar_ratio) %>%
+  summarize(mean_resp = mean(respiration, na.rm = TRUE),
+            sd_resp = sd(respiration, na.rm = TRUE),
+            n = n(),
+            se_resp = sd_resp / sqrt(n)) %>%
+  mutate(
+    treatment = factor(biochar_ratio,
+                       levels = c(0, 25, 50, 100),
+                       labels = c("0%", "25%", "50%", "100%")),
+    plot_type = "Biochar Level"
+  )
+
+# Summarize by fertilizer
+fert_summary <- resp %>%
+  group_by(fertilizer) %>%
+  summarize(mean_resp = mean(respiration, na.rm = TRUE),
+            sd_resp = sd(respiration, na.rm = TRUE),
+            n = n(),
+            se_resp = sd_resp / sqrt(n)) %>%
+  mutate(
+    treatment = factor(
+      fertilizer,
+      levels = c("none", "half", "full", "double"),
+      labels = c("none", "1/2-standard", "standard", "2×-standard")
+    ),
+    plot_type = "Fertilizer Rate"
+  )
+
+
+# significant letters
+  # Biochar letters: 0%, 25%, 50%, 100%
+  biochar_summary$sig_letter <- c("a", "a", "a", "b")
+
+  # Fertilizer letters: none, half, full, double
+  fert_summary$sig_letter <- c("b", "b", "b", "a")
+  
+# Combine both
+combined_summary <- bind_rows(biochar_summary, fert_summary)
+
+# Plot
+ggplot(combined_summary, aes(x = treatment, y = mean_resp, fill = plot_type)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_errorbar(aes(ymin = mean_resp - se_resp, ymax = mean_resp + se_resp),
+                width = 0.2, position = position_dodge(0.9)) +
+  geom_text(aes(label = sig_letter, y = mean_resp + se_resp + 0.005),  # 0.02 is offset above error bar
+            position = position_dodge(0.9), size = 5) +
+  facet_wrap(~ plot_type, scales = "free_x") +
+  labs(x = "Treatment",
+       y = expression("Mean CO"[2]~"flux rates (µmol CO "[2]~"m"^{-2}~"s"^{-1}*")")) +
+  theme_minimal(base_size = 12) +
+  scale_fill_manual(values = c("Biochar Level" = "#31688E", "Fertilizer Rate" = "#35B779")) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none",  # 🚫 Remove legend entirely
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.8),  # ✅ Box around each facet
+    strip.background = element_rect(fill = "grey90", color = "black"),  # Optional: box around facet labels
+    strip.text = element_text(face = "bold")
+  )
+
+#------------
+
+resp %>%
+  group_by(fertilizer, biochar_ratio, day) %>%
+  summarise(mean_resp = mean(respiration, na.rm = TRUE),
+            sd_resp = sd(respiration, na.rm = TRUE),
+            n = sum(!is.na(respiration))) %>%
+  arrange(fertilizer, biochar_ratio, day)
+
+#--------
+ 
+resp_clean <- resp %>% filter(!is.na(respiration))
+
+# Convert factors
+resp_clean <- resp_clean %>%
+  mutate(
+    fertilizer = factor(fertilizer),
+    biochar_ratio = factor(biochar_ratio),
+    day = factor(day),
+    replication = factor(replication)
+  )
+
+model_aov <- aov(respiration ~ fertilizer * biochar_ratio * day, data = resp_clean)
+#TukeyHSD(model_aov, which = "fertilizer")
+
+full_anova <- aov(respiration ~ fertilizer * biochar_ratio * day, data = resp)
+#summary(full_anova)
+
+#TukeyHSD(full_anova, which ="fertilizer")
+#TukeyHSD(full_anova, which ="biochar_ratio")
+#TukeyHSD(full_anova, which ="fertilizer:biochar_ratio")
+```
+
+### Biomass Data ###
+
+```{r Biomass}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+
+# bio_data <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet = "biomass", range = "A1:D49")
+
+bio_data <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet = "biomass", range = "A1:D49")
+
+bio_data$species    <- factor(bio_data$species)
+bio_data$fertilizer <- factor(bio_data$fertilizer)
+bio_data$biochar    <- factor(bio_data$biochar)
+
+# str(bio_data)
+
+# ----------
+
+# For slash pine
+sl_data <- bio_data[bio_data$species == "sl", ]
+
+aov_sl <- aov(biomass ~ fertilizer + biochar, data = sl_data)
+summary(aov_sl)
+
+#-----------------
+
+# For longleaf pine
+ll_data <- bio_data[bio_data$species == "ll", ]
+ll_aov <- aov(biomass ~ fertilizer + biochar, data = ll_data)
+summary(ll_aov)
+
+#-----------------
+
+# For loblolly pine
+lob_data <- bio_data[bio_data$species == "lob", ]
+lob_aov <- aov(biomass ~ fertilizer + biochar, data = lob_data)
+summary(lob_aov)
+
+# ------------
+
+bio_data <- bio_data %>%
+  mutate(
+    species = recode(species,
+                     "ll" = "Longleaf Pine",
+                     "lob" = "Loblolly Pine",
+                     "sl" = "Slash Pine"),
+    fertilizer = factor(fertilizer, 
+                        levels = c("none", "half", "full", "double"),
+                        labels = c("none", "1/2-standard", "standard", "2×-standard"))
+  )
+
+# Bar graph: biochar on x-axis, fertilizer as fill
+ggplot(bio_data, aes(x = factor(biochar), y = biomass, fill = fertilizer)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  facet_wrap(~species) +
+  labs(
+    x = "Biochar Level (%)",
+    y = "Biomass per Seedling (g)",
+    fill = "Fertilizer Rate"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 1),
+    strip.background = element_rect(fill = "grey90", color = "black"),
+    strip.text = element_text(face = "bold"),
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 0, hjust = 0.5)
+  )
+
+
+```
+
+### RSR Data and Fig. 4 ###
+
+```{r RSR}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(lme4)     
+library(emmeans) 
+library(ggpubr) 
+library(Matrix)
+
+rsr <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet="rsr", range="A1:D49")
+#head(rsr)
+
+# ------
+
+# Make sure fertilizer and biochar_ratio are factors
+rsr$fertilizer <- factor(rsr$fertilizer, levels = c("none", "half", "full", "double"))
+rsr$biochar_ratio <- factor(rsr$biochar_ratio, levels = c("0", "25", "50", "100"))
+rsr$species <- factor(rsr$species)
+
+# Run a two-way ANOVA with species as an additional factor:
+#anova_rsr <- aov(mean_RSR ~ fertilizer * biochar_ratio * species, data = rsr)
+#summary(anova_rsr)
+
+#TukeyHSD(anova_rsr, which = "species")
+#TukeyHSD(anova_rsr, which = "fertilizer")
+#TukeyHSD(anova_rsr, which = "biochar_ratio")
+#TukeyHSD(anova_rsr, which = "fertilizer:biochar_ratio")
+#TukeyHSD(anova_rsr, which = "fertilizer:species")
+#TukeyHSD(anova_rsr, which = "biochar_ratio:species")
+#TukeyHSD(anova_rsr, which = "fertilizer:biochar_ratio:species")
+
+# -------
+
+rsr_model <- aov(mean_RSR ~ species + fertilizer + biochar_ratio, data = rsr)
+summary(rsr_model)
+#TukeyHSD(rsr_model, which = "species")
+
+# -------
+
+# Subset for loblolly
+loblolly_rsr <- rsr %>% filter(species == "lob") %>% droplevels()
+
+# One-way ANOVA for fertilizer
+anova_fert <- aov(mean_RSR ~ fertilizer, data = loblolly_rsr)
+#summary(anova_fert)
+#TukeyHSD(anova_fert)
+
+# One-way ANOVA for biochar ratio
+anova_bio <- aov(mean_RSR ~ biochar_ratio, data = loblolly_rsr)
+#summary(anova_bio)
+#TukeyHSD(anova_bio)
+
+# ------
+
+# Subset to longleaf
+longleaf_rsr <- rsr %>% filter(species == "ll") %>% droplevels()
+
+# One-way ANOVA for fertilizer
+anova_fert_longleaf <- aov(mean_RSR ~ fertilizer, data = longleaf_rsr)
+#summary(anova_fert_longleaf)
+#TukeyHSD(anova_fert_longleaf)
+
+# One-way ANOVA for biochar_ratio
+anova_bio_longleaf <- aov(mean_RSR ~ biochar_ratio, data = longleaf_rsr)
+#summary(anova_bio_longleaf)
+#TukeyHSD(anova_bio_longleaf)
+# ------
+
+# Subset to slash
+slash_rsr <- rsr %>% filter(species == "sl") %>% droplevels()
+
+# One-way ANOVA for fertilizer
+anova_fert_slash <- aov(mean_RSR ~ fertilizer, data = slash_rsr)
+#TukeyHSD(anova_fert_slash)
+
+# One-way ANOVA for biochar_ratio
+anova_bio_slash <- aov(mean_RSR ~ biochar_ratio, data = slash_rsr)
+
+#TukeyHSD(anova_bio_slash)
+
+# ------
+
+
+```
+
+
+
+```{r RSR}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(lme4)     
+library(emmeans) 
+library(ggpubr) 
+library(Matrix)
+library(ggpattern)
+
+# Read and recode
+rsr <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="rsr", range="A1:D49")
+#rsr <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet="rsr", range="A1:D49")
+
+rsr <- rsr %>%
+  mutate(
+    species = recode(species,
+                     "ll" = "Longleaf Pine",
+                     "lob" = "Loblolly Pine",
+                     "sl" = "Slash Pine"),
+    fertilizer = factor(fertilizer, 
+                        levels = c("none", "half", "full", "double"),
+                        labels = c("none", "1/2-standard", "standard", "2×-standard"))
+  )
+
+# Optional filter — remove if plotting all species
+rsr_sl <- rsr %>%
+  filter(species == "Slash Pine")
+
+# Optional summary
+rsr_summary <- rsr_sl %>%
+  group_by(biochar_ratio, fertilizer) %>%
+  summarise(
+    se_RSR = sd(mean_RSR, na.rm = TRUE) / sqrt(n()),
+    n = n(),
+    .groups = "drop"
+  )
+
+# Plot with boxed panels
+ggplot(rsr, aes(x = factor(biochar_ratio), y = mean_RSR, fill = fertilizer, pattern = fertilizer)) +
+  geom_bar_pattern(
+    stat = "identity",
+    position = position_dodge(width = 0.8),
+    pattern_fill = "black",
+    pattern_angle = 45,
+    pattern_density = 0.01,
+    pattern_spacing = 0.05
+  ) +
+  facet_wrap(~ species) +
+  scale_fill_manual(
+    name = "Fertilizer Rate",
+    values = c("none" = "#440154",
+               "1/2-standard" = "#31688E",
+               "standard" = "#35B779",
+               "2×-standard" = "#D9F0A3"),
+    labels = c("none", "1/2-standard", "standard", "2×-standard")
+  ) +
+  scale_pattern_manual(
+    values = c("none" = "none",
+               "1/2-standard" = "none",
+               "standard" = "none",
+               "2×-standard" = "none"),
+    name = "Fertilizer Rate"
+  ) +
+  theme_minimal() +
+  labs(x = "Biochar Level (%)", 
+       y = "Mean Root-to-Shoot Ratio", 
+       title = "",
+       fill = "Fertilizer Rate") +
+  theme(
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 1),
+    strip.background = element_rect(fill = "grey90", color = "black"),  # grey box behind facet labels
+    strip.text = element_text(face = "bold")                            # bold text in strips
+  )
+
+```
