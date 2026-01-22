@@ -677,17 +677,34 @@ print(biochar_summary)
 # -------------------------
 # 5. Bar plot: biomass per seedling
 # -------------------------
-#ggplot(treatment_summary, aes(x = biochar, y = mean_biomass, fill = fertilizer)) +
-  #geom_bar(stat = "identity", position = position_dodge()) +
-  #facet_wrap(~species) +
-  #labs(x = "Biochar Level (%)", y = "Biomass per Seedling (g)", fill = "Fertilizer Rate") +
-  #theme_minimal(base_size = 12) +
-  #theme(panel.border = element_rect(color = "black", fill = NA),
-        #strip.background = element_rect(fill = "grey90", color = "black"),
-        #strip.text = element_text(face = "bold"),
-        #axis.text.x = element_text(angle = 0, hjust = 0.5))
+ggplot(treatment_summary,
+       aes(x = biochar, y = mean_biomass, fill = fertilizer)) +
+  geom_bar(stat = "identity",
+           position = position_dodge(width = 0.8)) +
+  facet_wrap(~ species) +
+  scale_fill_manual(
+    name = "Fertilizer Rate",
+    values = c(
+      "none" = "#440154",
+      "1/2-standard" = "#31688E",
+      "standard" = "#35B779",
+      "2×-standard" = "#D9F0A3"
+    ),
+    labels = c("none", "1/2-standard", "standard", "2×-standard")
+  ) +
+  labs(
+    x = "Biochar Level (%)",
+    y = "Total dry biomass per seedling (g)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.border = element_rect(color = "black", fill = NA),
+    strip.background = element_rect(fill = "grey90", color = "black"),
+    strip.text = element_text(face = "bold"),
+    axis.text.x = element_text(hjust = 0.5)
+  )
 
-write.csv(treatment_summary, "C:/Users/jlsoc/Downloads/biomass_summary.csv",
+#write.csv(treatment_summary, "C:/Users/jlsoc/Downloads/biomass_summary.csv",
           row.names = FALSE)
 ```
 
@@ -727,7 +744,7 @@ rsr$species <- factor(rsr$species)
 # -------
 
 rsr_model <- aov(mean_RSR ~ species + fertilizer + biochar_ratio, data = rsr)
-summary(rsr_model)
+#summary(rsr_model)
 #TukeyHSD(rsr_model, which = "species")
 
 # -------
@@ -766,19 +783,15 @@ slash_rsr <- rsr %>% filter(species == "sl") %>% droplevels()
 
 # One-way ANOVA for fertilizer
 anova_fert_slash <- aov(mean_RSR ~ fertilizer, data = slash_rsr)
+#summary(anova_fert_slash)
 #TukeyHSD(anova_fert_slash)
 
 # One-way ANOVA for biochar_ratio
 anova_bio_slash <- aov(mean_RSR ~ biochar_ratio, data = slash_rsr)
-
+#summary(anova_bio_slash)
 #TukeyHSD(anova_bio_slash)
 
-# ------
-
-
 ```
-
-
 
 ```{r RSR}
 library(readxl)
@@ -791,8 +804,8 @@ library(Matrix)
 library(ggpattern)
 
 # Read and recode
-rsr <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="rsr", range="A1:D49")
-#rsr <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet="rsr", range="A1:D49")
+#rsr <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="rsr", range="A1:D49")
+rsr <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet="rsr", range="A1:D49")
 
 rsr <- rsr %>%
   mutate(
