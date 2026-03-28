@@ -17,12 +17,8 @@ library(emmeans)
 # =========================
 # 2. Import data
 # =========================
-germ_data <- read_excel(
-  "C:/Users/jwl0037/Downloads/biochartree.xlsx",
-  sheet = "germination",
-  range = "A1:D13"  # adjust if needed
-)
-
+#germ_data <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet = "germination", range = "A1:D13")
+germ_data <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet = "germination", range = "A1:D13")
 # =========================
 # 3. Clean & transform
 # =========================
@@ -121,7 +117,9 @@ surv_data <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx",
 
 # 2. ANOVA across species
 anova_model <- aov(survival_rate ~ fertilizer * biochar_percent * species, data=surv_data)
-summary(anova_model)
+#summary(anova_model)
+
+#TukeyHSD(anova_model, which = "fertilizer:biochar_percent")
 
 # 3. Summarize for plotting
 summary_data <- surv_data %>%
@@ -704,8 +702,17 @@ ggplot(treatment_summary,
     axis.text.x = element_text(hjust = 0.5)
   )
 
-#write.csv(treatment_summary, "C:/Users/jlsoc/Downloads/biomass_summary.csv",
-          row.names = FALSE)
+#write.csv(treatment_summary, "C:/Users/jlsoc/Downloads/biomass_summary.csv", row.names = FALSE)
+
+lob <- subset(bio_data, species == "Loblolly Pine")
+aov(lob$biomass ~ lob$fertilizer + lob$biochar)
+summary(aov(biomass ~ fertilizer + biochar, data = lob))
+
+ll <- subset(bio_data, species == "Longleaf Pine")
+summary(aov(biomass ~ fertilizer + biochar, data = ll))
+
+sl <- subset(bio_data, species == "Slash Pine")
+summary(aov(biomass ~ fertilizer + biochar, data = sl))
 ```
 
 ### RSR Data and Fig. 4 ###
