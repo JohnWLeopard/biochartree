@@ -18,7 +18,7 @@ library(emmeans)
 # 2. Import data
 # =========================
 #germ_data <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet = "germination", range = "A1:D13")
-#germ_data <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet = "germination", range = "A1:D13")
+germ_data <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet = "germination", range = "A1:D13")
 
 # =========================
 # 3. Clean & transform
@@ -85,12 +85,12 @@ summary_species_biochar <- germ_data %>%
 # =========================
 # Uncomment and adjust if you want a bar plot similar to survival/respiration plots
 
-# ggplot(summary_species_biochar, aes(x = species, y = mean_rate, fill = biochar_level)) +
-#   geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
-#   geom_errorbar(aes(ymin = mean_rate - se_rate, ymax = mean_rate + se_rate),
-#                 width = 0.2, position = position_dodge(width = 0.8)) +
-#   labs(x = "Species", y = "Mean Germination Rate (%)", fill = "Biochar Level (%)") +
-#   theme_minimal(base_size = 13)
+ #ggplot(summary_species_biochar, aes(x = species, y = mean_rate, fill = biochar_level)) +
+   #geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
+   #geom_errorbar(aes(ymin = mean_rate - se_rate, ymax = mean_rate + se_rate),
+                 #width = 0.2, position = position_dodge(width = 0.8)) +
+   #labs(x = "Species", y = "Mean Germination Rate (%)", fill = "Biochar Level (%)") +
+   #theme_minimal(base_size = 13)
 
 ```
 
@@ -100,8 +100,8 @@ summary_species_biochar <- germ_data %>%
 library(readxl); library(dplyr); library(ggplot2); library(scales)
 
 # 1. Import & clean data
-#surv_data <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet="survival", range="A1:F145") 
-surv_data <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="survival", range="A1:F145")%>%
+surv_data <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet="survival", range="A1:F145")%>% 
+#surv_data <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="survival", range="A1:F145")%>%
   mutate(
     survival = as.numeric(suppressWarnings(survival)),  # NAs expected
     survival_rate = survival / seeded,
@@ -111,7 +111,7 @@ surv_data <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="su
                      "sl"="Slash Pine"),
     fertilizer = factor(fertilizer,
                         levels=c("none","half","full","double"),
-                        labels=c("none","1/2-standard","standard","2×-standard")),
+                        labels=c("0","0.5×","1×","2×")),
     biochar_percent = as.factor(`biochar_%`)
   ) %>%
   filter(!is.na(survival_rate), !is.na(fertilizer), !is.na(biochar_percent), !is.na(species))
@@ -143,10 +143,10 @@ ggplot(summary_data, aes(x=fertilizer, y=mean_survival, fill=biochar_percent)) +
   theme(panel.border=element_rect(color="black", fill=NA, size=0.5),
         strip.background=element_rect(fill="gray90", color="black"),
         strip.text=element_text(face="bold"),
-        axis.text.x=element_text(angle=45, hjust=1),
+        axis.text.x=element_text(angle=0, hjust=.5),
         legend.position = "bottom"
         )
-# ggsave("survival_plot.png", plot = p_survival, width = 12, height = 8, dpi = 600, bg = "white")
+ #ggsave("survival_plot.png", plot = ggplot, width = 12, height = 8, dpi = 600, bg = "white")
 ```
 
 ### CO2 Flux Rates Data and Figure 2 & 3 ###
@@ -168,7 +168,7 @@ library(Matrix)
 # 2. Import data
 # =========================
 #resp <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet = "respiration", range = "A1:E193")
-resp <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet = "respiration", range = "A1:E193")
+#resp <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet = "respiration", range = "A1:E193")
 
 # Optional: remove specific outlier (replication 2 & day 2)
 resp <- resp %>%
@@ -313,8 +313,8 @@ library(scales)
 # =========================
 # 1. Import & clean data
 # =========================
-resp <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx",
-                   sheet = "respiration", range = "A1:E193")
+#resp <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet = "respiration", range = "A1:E193")
+resp <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet = "respiration", range = "A1:E193")
 
 # Remove specific outlier (optional)
 resp <- resp %>%
@@ -326,7 +326,7 @@ resp <- resp %>%
     biochar_ratio = factor(biochar_ratio, levels = c(0, 25, 50, 100),
                            labels = c("0%", "25%", "50%", "100%")),
     fertilizer = factor(fertilizer, levels = c("none", "half", "full", "double"),
-                        labels = c("none", "1/2-standard", "standard", "2×-standard")),
+                        labels = c("0", "0.5×", "1×", "2×")),
     day = factor(day),
     replication = factor(replication)
   )
@@ -347,10 +347,10 @@ combined_summary <- resp %>%
     biochar_fert = interaction(biochar_ratio, fertilizer, sep = "_"),
     biochar_fert = factor(biochar_fert,
       levels = c(
-        "0%_none", "0%_1/2-standard", "0%_standard", "0%_2×-standard",
-        "25%_none", "25%_1/2-standard", "25%_standard", "25%_2×-standard",
-        "50%_none", "50%_1/2-standard", "50%_standard", "50%_2×-standard",
-        "100%_none", "100%_1/2-standard", "100%_standard", "100%_2×-standard"
+        "0%_0", "0%_0.5×", "0%_1×", "0%_2×",
+        "25%_0", "25%_0.5×", "25%_1×", "25%_2×",
+        "50%_0", "50%_0.5×", "50%_1×", "50%_2×",
+        "100%_0", "100%_0.5×", "100%_1×", "100%_2×"
       ))
   )
 
@@ -393,7 +393,7 @@ ggplot(combined_summary, aes(x = biochar_fert, y = mean_resp, fill = biochar_rat
   ) +
   theme_minimal(base_size = 13) +
   theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text.x = element_text(angle = 0, hjust = 0.5),
     panel.border = element_rect(color = "black", fill = NA),
     legend.position = "bottom"
   )
@@ -411,8 +411,8 @@ library(emmeans)
 library(ggpubr) 
 library(Matrix)
 
-#resp <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet="respiration", range="A1:E193")
-resp <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="respiration", range="A1:E193")
+resp <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet="respiration", range="A1:E193")
+#resp <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="respiration", range="A1:E193")
 #head(resp)
 
 resp <- resp %>%
@@ -451,7 +451,7 @@ fert_summary <- resp %>%
     treatment = factor(
       fertilizer,
       levels = c("none", "half", "full", "double"),
-      labels = c("none", "1/2-standard", "standard", "2×-standard")
+      labels = c("0", "0.5×", "1×", "2×")
     ),
     plot_type = "Fertilizer Rate"
   )
@@ -480,7 +480,7 @@ ggplot(combined_summary, aes(x = treatment, y = mean_resp, fill = plot_type)) +
   theme_minimal(base_size = 12) +
   scale_fill_manual(values = c("Biochar Level" = "#31688E", "Fertilizer Rate" = "#35B779")) +
   theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text.x = element_text(angle = 0, hjust = 0.5),
     legend.position = "none",  # 🚫 Remove legend entirely
     panel.border = element_rect(color = "black", fill = NA, linewidth = 0.8),  # ✅ Box around each facet
     strip.background = element_rect(fill = "grey90", color = "black"),  # Optional: box around facet labels
@@ -581,7 +581,7 @@ ggplot(treatment_summary,
       "standard" = "#35B779",
       "2×-standard" = "#D9F0A3"
     ),
-    labels = c("none", "1/2-standard", "standard", "2×-standard")
+    labels = c("0", "0.5×", "1×", "2×")
   ) +
   labs(
     x = "Biochar Level (%)",
@@ -715,7 +715,7 @@ rsr <- rsr %>%
                      "sl" = "Slash Pine"),
     fertilizer = factor(fertilizer, 
                         levels = c("none", "half", "full", "double"),
-                        labels = c("none", "1/2-standard", "standard", "2×-standard"))
+                        labels = c("0", "0.5×", "1×", "2×"))
   )
 
 # Optional filter — remove if plotting all species
@@ -744,11 +744,11 @@ ggplot(rsr, aes(x = factor(biochar_ratio), y = mean_RSR, fill = fertilizer, patt
   facet_wrap(~ species) +
   scale_fill_manual(
     name = "Fertilizer Rate",
-    values = c("none" = "#440154",
-               "1/2-standard" = "#31688E",
-               "standard" = "#35B779",
-               "2×-standard" = "#D9F0A3"),
-    labels = c("none", "1/2-standard", "standard", "2×-standard")
+    values = c("0" = "#440154",
+               "0.5×" = "#31688E",
+               "1×" = "#35B779",
+               "2×" = "#D9F0A3"),
+    labels = c("0", "0.5×", "1×", "2×")
   ) +
   scale_pattern_manual(
     values = c("none" = "none",
