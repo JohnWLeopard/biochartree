@@ -100,8 +100,8 @@ summary_species_biochar <- germ_data %>%
 library(readxl); library(dplyr); library(ggplot2); library(scales)
 
 # 1. Import & clean data
-surv_data <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet="survival", range="A1:F145")%>% 
-#surv_data <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="survival", range="A1:F145")%>%
+#surv_data <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet="survival", range="A1:F145")%>% 
+surv_data <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="survival", range="A1:F145")%>%
   mutate(
     survival = as.numeric(suppressWarnings(survival)),  # NAs expected
     survival_rate = survival / seeded,
@@ -136,7 +136,7 @@ ggplot(summary_data, aes(x=fertilizer, y=mean_survival, fill=biochar_percent)) +
                     ymax=mean_survival + se_survival),
                 width=0.2, position=position_dodge(0.8)) +
   facet_wrap(~species) +
-  labs(y="Mean Survival Rate (%)", x="Fertilizer Rate", fill="Biochar Level (%)") +
+  labs(y="Survival Rate (%)", x="Fertilizer Rate", fill="Biochar Level (%)") +
   scale_fill_manual(values=c("0"="#440154","25"="#31688E","50"="#35B779","100"="#D9F0A3")) +
   scale_y_continuous(labels=number_format(scale=1), expand=expansion(mult=c(0,0.1))) +
   theme_minimal(base_size=13) +
@@ -313,8 +313,8 @@ library(scales)
 # =========================
 # 1. Import & clean data
 # =========================
-#resp <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet = "respiration", range = "A1:E193")
-resp <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet = "respiration", range = "A1:E193")
+resp <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet = "respiration", range = "A1:E193")
+#resp <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet = "respiration", range = "A1:E193")
 
 # Remove specific outlier (optional)
 resp <- resp %>%
@@ -389,14 +389,17 @@ ggplot(combined_summary, aes(x = biochar_fert, y = mean_resp, fill = biochar_rat
   scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
   labs(
     x = "Fertilizer Rates",
-    y = expression("Mean CO "[2]~"flux rates (µmol CO"[2]~"m"^{-2}~"s"^{-1}*")")
+    y = expression("CO "[2]~"Flux Rrates (µmol CO"[2]~"m"^{-2}~"s"^{-1}*")")
   ) +
   theme_minimal(base_size = 13) +
-  theme(
-    axis.text.x = element_text(angle = 0, hjust = 0.5),
-    panel.border = element_rect(color = "black", fill = NA),
-    legend.position = "bottom"
-  )
+theme(
+  axis.text.x = element_text(size = 14, angle = 0, hjust = 0.5),  # x-axis tick labels
+  axis.text.y = element_text(size = 14),                          # y-axis tick labels
+  axis.title.x = element_text(size = 16),                         # x-axis title
+  axis.title.y = element_text(size = 16),                         # y-axis title
+  panel.border = element_rect(color = "black", fill = NA),
+  legend.position = "bottom"
+)
 
 #ggsave("biochar_CO2_flux_figure.png", width = 10, height = 8,dpi = 300)
 ```
@@ -411,8 +414,8 @@ library(emmeans)
 library(ggpubr) 
 library(Matrix)
 
-resp <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet="respiration", range="A1:E193")
-#resp <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="respiration", range="A1:E193")
+#resp <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet="respiration", range="A1:E193")
+resp <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="respiration", range="A1:E193")
 #head(resp)
 
 resp <- resp %>%
@@ -476,7 +479,7 @@ ggplot(combined_summary, aes(x = treatment, y = mean_resp, fill = plot_type)) +
             position = position_dodge(0.9), size = 5) +
   facet_wrap(~ plot_type, scales = "free_x") +
   labs(x = "Treatment",
-       y = expression("Mean CO"[2]~"flux rates (µmol CO "[2]~"m"^{-2}~"s"^{-1}*")")) +
+       y = expression("CO"[2]~"Flux Rates (µmol CO "[2]~"m"^{-2}~"s"^{-1}*")")) +
   theme_minimal(base_size = 12) +
   scale_fill_manual(values = c("Biochar Level" = "#31688E", "Fertilizer Rate" = "#35B779")) +
   theme(
@@ -525,8 +528,16 @@ full_anova <- aov(respiration ~ fertilizer * biochar_ratio * day, data = resp)
 ```{r Biomass}
 library(readxl); library(dplyr); library(ggplot2)
 
-bio_data <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", 
-                       sheet = "biomass", range = "A1:D49") %>%
+#bio_data <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet = "biomass", range = "A1:D49") %>%
+  #mutate(
+    #species = recode(species, "lob"="Loblolly Pine", "ll"="Longleaf Pine", "sl"="Slash Pine"),
+    #species = factor(species, levels = c("Loblolly Pine", "Longleaf Pine", "Slash Pine")),
+    #fertilizer = factor(fertilizer, levels = c("none","half","full","double"),
+                        #labels = c("none","1/2-standard","standard","2×-standard")),
+    #biochar = factor(biochar, levels = c(0,25,50,100))
+  #)
+
+bio_data <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet = "biomass", range = "A1:D49") %>%
   mutate(
     species = recode(species, "lob"="Loblolly Pine", "ll"="Longleaf Pine", "sl"="Slash Pine"),
     species = factor(species, levels = c("Loblolly Pine", "Longleaf Pine", "Slash Pine")),
@@ -585,7 +596,7 @@ ggplot(treatment_summary,
   ) +
   labs(
     x = "Biochar Level (%)",
-    y = "Total dry biomass per seedling (g)"
+    y = expression("Total Biomass (g seedling"^{-1}*")")
   ) +
   theme_minimal(base_size = 12) +
   theme(
@@ -704,8 +715,8 @@ library(Matrix)
 library(ggpattern)
 
 # Read and recode
-#rsr <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="rsr", range="A1:D49")
-rsr <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet="rsr", range="A1:D49")
+rsr <- read_excel("C:/Users/jwl0037/Downloads/biochartree.xlsx", sheet="rsr", range="A1:D49")
+#rsr <- read_excel("C:/Users/jlsoc/Downloads/biochartree.xlsx", sheet="rsr", range="A1:D49")
 
 rsr <- rsr %>%
   mutate(
@@ -759,7 +770,7 @@ ggplot(rsr, aes(x = factor(biochar_ratio), y = mean_RSR, fill = fertilizer, patt
   ) +
   theme_minimal() +
   labs(x = "Biochar Level (%)", 
-       y = "Mean Root-to-Shoot Ratio", 
+       y = "Mean Root-to-Shoot Biomass Ratio", 
        title = "",
        fill = "Fertilizer Rate") +
   theme(
